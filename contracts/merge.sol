@@ -2446,7 +2446,7 @@ contract Kepler is KIP17Full, Ownable {
 
 contract KeplerItems is KIP37, KIP37Burnable, KIP37Pausable, KIP37Mintable, Ownable {
     string public name = "Kepler Items";
-    string public symbol = "Ktem";
+    string public symbol = "KTEM";
 
     constructor(string memory uri) public KIP37(uri) {}
 
@@ -2485,7 +2485,7 @@ contract KeplerStoneMinter is Ownable {
     using SafeMath for uint256;
 
     Kepler public nft = Kepler(0xf1919F40af70394762bed30E98d95DdFbac79080);
-    KeplerItems public nft37 = KeplerItems(0x050ae51CFD1C40E86E768fCA9De80EB9128b97e9);
+    KeplerItems public nft37 = KeplerItems(0x08Acf51778Ac8876b791DA6f75B7259E4DEc3f1D);
     IMix public mix = IMix(0xDd483a970a7A7FeF2B223C3510fAc852799a88BF);
     uint256 public mintPrice = 1 * 1e18;
     uint256 public maxCount = 5;
@@ -2509,10 +2509,11 @@ contract KeplerStoneMinter is Ownable {
     }
     
     function mint(uint256 id, uint256 count) external {
+        uint256 balance = nft37.balanceOf(address(this), id);
         require(nft.balanceOf(msg.sender) >= 1);
-        require(count <= limit && count <= maxCount);
-
-        nft37.massMint(id, count);
+        require(count <= balance && count <= maxCount);
+        
+        nft37.safeTransferFrom(address(this), msg.sender, id, count, "0x00");
         uint256 price = mintPrice.mul(count);
                 
         mix.transferFrom(msg.sender, feeTo, price);
@@ -2520,10 +2521,11 @@ contract KeplerStoneMinter is Ownable {
     }
     
     function firstMint(uint256 id, uint256 count) external {
+        uint256 balance = nft37.balanceOf(address(this), id);
         require(nft.balanceOf(msg.sender) >= 1);
-        require(count <= limit && count <= maxCount);
-
-        nft37.massMint(id, count);
+        require(count <= balance && count <= maxCount);
+        
+        nft37.safeTransferFrom(address(this), msg.sender, id, count, "0x00");
         uint256 price = mintPrice.mul(count);
         // 100% to burn
         uint256 burn = price;
