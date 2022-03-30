@@ -295,6 +295,15 @@ contract KIP37Receiver is KIP13, IKIP37Receiver {
                 KIP37Receiver(0).onKIP37BatchReceived.selector
         );
     }
+
+    function onKIP37Received(
+        address operator,
+        address from,
+        uint256 id,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bytes4);
+
 }
 
 /**
@@ -2485,7 +2494,7 @@ contract KeplerStoneMinter is Ownable {
     using SafeMath for uint256;
 
     Kepler public nft = Kepler(0xf1919F40af70394762bed30E98d95DdFbac79080);
-    KeplerItems public nft37 = KeplerItems(0x08Acf51778Ac8876b791DA6f75B7259E4DEc3f1D);
+    KeplerItems public nft37 = KeplerItems(0x301895164F700e8f9556c562882AC1b63dFB3F44);
     IMix public mix = IMix(0xDd483a970a7A7FeF2B223C3510fAc852799a88BF);
     uint256 public mintPrice = 1 * 1e18;
     uint256 public maxCount = 5;
@@ -2507,13 +2516,13 @@ contract KeplerStoneMinter is Ownable {
     function setLimit(uint256 _limit) external onlyOwner {
         limit = _limit;
     }
-    
+
     function mint(uint256 id, uint256 count) external {
-        uint256 balance = nft37.balanceOf(address(this), id);
+        uint256 balance = nft37.balanceOf(feeTo, id);
         require(nft.balanceOf(msg.sender) >= 1);
         require(count <= balance && count <= maxCount);
         
-        nft37.safeTransferFrom(address(this), msg.sender, id, count, "0x00");
+        nft37.safeTransferFrom(feeTo, msg.sender, id, count, "0x00");
         uint256 price = mintPrice.mul(count);
                 
         mix.transferFrom(msg.sender, feeTo, price);
@@ -2521,11 +2530,11 @@ contract KeplerStoneMinter is Ownable {
     }
     
     function firstMint(uint256 id, uint256 count) external {
-        uint256 balance = nft37.balanceOf(address(this), id);
+        uint256 balance = nft37.balanceOf(feeTo, id);
         require(nft.balanceOf(msg.sender) >= 1);
         require(count <= balance && count <= maxCount);
         
-        nft37.safeTransferFrom(address(this), msg.sender, id, count, "0x00");
+        nft37.safeTransferFrom(feeTo, msg.sender, id, count, "0x00");
         uint256 price = mintPrice.mul(count);
         // 100% to burn
         uint256 burn = price;

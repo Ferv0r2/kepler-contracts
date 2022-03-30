@@ -2473,17 +2473,15 @@ contract KeplerItems is KIP37, KIP37Burnable, KIP37Pausable, KIP37Mintable, Owna
 contract KeplerStoneMinter is Ownable {
     using SafeMath for uint256;
 
-    Kepler public nft = Kepler(0x4eF64a0Df1c196E105351550dcc979D5371f70A4);
-    KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
-    address payable public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
-
+    Kepler public nft = Kepler(0x4eF64a0Df1c196E105351550dcc979D5371f70A4 );
+    KeplerItems public nft37 = KeplerItems(0x1EA0723B82B6141D9F597Ab7C8a88BC4977F5AFb);
+    uint256 public mintPrice = 1 * 1e18;
     uint256 public maxCount = 3;
-    uint256[] public mintPrice = [10, 20, 30];
-    uint256[] public limit = [200, 100, 50];
+    address payable public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
+    uint256[] public limit;
 
-    function addBox(uint256 _price,  uint256 _limit) external onlyOwner {
-        mintPrice.push(_price);
-        limit.push(_limit);
+    function setMintPrice(uint256 _price) external onlyOwner {
+        mintPrice = _price;
     }
 
     function setFeeTo(address payable _feeTo) external onlyOwner {
@@ -2494,21 +2492,17 @@ contract KeplerStoneMinter is Ownable {
         maxCount = _maxCount;
     }
 
-    function setMintPrice(uint256 _boxId, uint256 _price) external onlyOwner {
-        mintPrice[_boxId] = _price * 1e18;
+    function setLimit(uint256 id, uint256 _limit) external onlyOwner {
+        limit[id] = _limit;
     }
 
-    function setLimit(uint256 _boxId, uint256 _limit) external onlyOwner {
-        limit[_boxId] = _limit;
-    }
-
-    function mint(uint256 _boxId, uint256 id, uint256 count) payable external {
+    function mint(uint256 id, uint256 count) payable external {
         require(nft.balanceOf(msg.sender) >= 1);
-        require(count <= limit[_boxId] && count <= maxCount);
-        require(msg.value == mintPrice[_boxId].mul(count));
+        require(count <= limit[id] && count <= maxCount);
+        require(msg.value == mintPrice.mul(count));
         
         nft37.massMint(id, count);
         feeTo.transfer(msg.value);
-        limit[_boxId] = limit[_boxId].sub(count);
+        limit[id] = limit[id].sub(count);
     }
 }
