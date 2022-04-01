@@ -2470,18 +2470,20 @@ contract KeplerItems is KIP37, KIP37Burnable, KIP37Pausable, KIP37Mintable, Owna
     }
 }
 
-contract KeplerStoneMinter is Ownable {
+contract KeplerBoxMinter is Ownable {
     using SafeMath for uint256;
 
-    Kepler public nft = Kepler(0x4eF64a0Df1c196E105351550dcc979D5371f70A4);
+    Kepler public nft = Kepler(0x928267E7dB3d173898553Ff593A78719Bb16929F);
     KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
     address payable public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
 
     uint256 public maxCount = 3;
-    uint256[] public mintPrice = [10, 20, 30];
+    uint256[] public keyIds = [39, 40, 41];
+    uint256[] public mintPrice = [3 * 1e18, 4 * 1e18, 5 * 1e18];
     uint256[] public limit = [200, 100, 50];
 
-    function addBox(uint256 _price,  uint256 _limit) external onlyOwner {
+    function addBox(uint256 _keyId, uint256 _price,  uint256 _limit) external onlyOwner {
+        keyIds.push(_keyId);
         mintPrice.push(_price);
         limit.push(_limit);
     }
@@ -2502,13 +2504,23 @@ contract KeplerStoneMinter is Ownable {
         limit[_boxId] = _limit;
     }
 
-    function mint(uint256 _boxId, uint256 id, uint256 count) payable external {
+    function mintOfKlay(uint256 _boxId, uint256 _id, uint256 _count) payable external {
         require(nft.balanceOf(msg.sender) >= 1);
-        require(count <= limit[_boxId] && count <= maxCount);
-        require(msg.value == mintPrice[_boxId].mul(count));
+        require(_count <= limit[_boxId] && _count <= maxCount);
+        require(msg.value == mintPrice[_boxId].mul(_count));
         
-        nft37.massMint(id, count);
+        nft37.massMint(_id, _count);
         feeTo.transfer(msg.value);
-        limit[_boxId] = limit[_boxId].sub(count);
+        limit[_boxId] = limit[_boxId].sub(_count);
+    }
+    
+    function mintOfItem(uint256 _boxId, uint256 _id, uint256 _count) external {
+        require(nft.balanceOf(msg.sender) >= 1);
+        require(_count <= limit[_boxId] && _count <= maxCount);
+        require(nft37.balanceOf(msg.sender, keyIds[_boxId]) >= _count);
+        
+        nft37.massMint(_id, _count);
+        nft37.burn(msg.sender, keyIds[_boxId], _count);
+        limit[_boxId] = limit[_boxId].sub(_count);
     }
 }
