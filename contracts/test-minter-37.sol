@@ -2473,14 +2473,13 @@ contract KeplerItems is KIP37, KIP37Burnable, KIP37Pausable, KIP37Mintable, Owna
 contract KeplerBoxMinter is Ownable {
     using SafeMath for uint256;
 
-    Kepler public nft = Kepler(0x928267E7dB3d173898553Ff593A78719Bb16929F);
-    KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
+    KeplerItems public nft37 = KeplerItems(0xa2707E929D91BC19Da574699048e24fC6Dc9d336);
     address payable public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
 
     uint256 public maxCount = 3;
     uint256[] public keyIds = [39, 40, 41];
     uint256[] public mintPrice = [3 * 1e18, 4 * 1e18, 5 * 1e18];
-    uint256[] public limit = [3, 0, 0];
+    uint256[] public limit = [200, 100, 50];
 
     function addBox(uint256 _keyId, uint256 _price,  uint256 _limit) external onlyOwner {
         keyIds.push(_keyId);
@@ -2509,7 +2508,6 @@ contract KeplerBoxMinter is Ownable {
     }
 
     function mintOfKlay(uint256 _boxId, uint256 _id, uint256 _count) payable external {
-        require(nft.balanceOf(msg.sender) >= 1);
         require(_count <= limit[_boxId] && _count <= maxCount);
         require(msg.value == mintPrice[_boxId].mul(_count));
         
@@ -2517,9 +2515,9 @@ contract KeplerBoxMinter is Ownable {
         feeTo.transfer(msg.value);
         limit[_boxId] = limit[_boxId].sub(_count);
     }
-    
-    function mintOfItem(address _account,uint256 _boxId, uint256 _id, uint256 _count) external {
-        require(nft.balanceOf(msg.sender) >= 1);
+
+        
+    function mintOfItem(address _account, uint256 _boxId, uint256 _id, uint256 _count) external {
         require(_count <= limit[_boxId] && _count <= maxCount);
         require(nft37.balanceOf(msg.sender, keyIds[_boxId]) >= _count);
         
