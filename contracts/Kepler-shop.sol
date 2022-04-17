@@ -2424,12 +2424,45 @@ contract Ownable {
     }
 }
 
+interface IKlu {
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    
+    function mint(address to, uint256 amount) external;
+    function burn(uint256 amount) external;
+    function burnFrom(address account, uint256 amount) external;
+}
+
 contract Kepler is KIP17Full, Ownable {
     using SafeMath for uint256;
 
     event Klaytn17Burn(address _to, uint256 tokenId);
 
     constructor (string memory name, string memory symbol) public KIP17Full(name, symbol) {
+    }
+    
+    function burnSingle(uint256 _tokenId) external {
+        _burn(_tokenId);
+        emit Klaytn17Burn(msg.sender, _tokenId);
+    }
+
+    function burnBatch(uint256[] calldata _ids) external {
+        uint256 length = _ids.length;
+
+        for (uint256 i = 0; i < length; i += 1) {
+            _burn(_ids[i]);
+            emit Klaytn17Burn(msg.sender, _ids[i]);
+        }
     }
 }
 
@@ -2470,68 +2503,83 @@ contract KeplerItems is KIP37, KIP37Burnable, KIP37Pausable, KIP37Mintable, Owna
     }
 }
 
-contract KeplerBoxMinter is Ownable {
+contract KeplerShop is Ownable {
     using SafeMath for uint256;
 
     Kepler public nft = Kepler(0x928267E7dB3d173898553Ff593A78719Bb16929F);
     KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
-    address payable public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
+    IKlu public klu;
+    address public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
 
-    uint256 public maxCount = 3;
     uint256[] public keyIds = [39, 40, 41];
-    uint256[] public mintPrice = [3 * 1e18, 4 * 1e18, 5 * 1e18];
-    uint256[] public limit = [0, 0, 0];
+    uint256[] public stonePrice = [10, 20, 30];
 
-    function addBox(uint256 _keyId, uint256 _price,  uint256 _limit) external onlyOwner {
-        keyIds.push(_keyId);
+    uint256[] public mintPrice;
+    uint256[] public limit;
+
+    uint256 stone = 35;
+
+    function addItem(uint256 _price,  uint256 _limit) external onlyOwner {
         mintPrice.push(_price);
         limit.push(_limit);
     }
 
-    function setFeeTo(address payable _feeTo) external onlyOwner {
+    function addKey(uint256 _keyId) external onlyOwner {
+        keyIds.push(_keyId);
+    }
+
+    function setNFT(address _token) external onlyOwner {
+        nft = Kepler(_token);
+    }
+
+    function setItem(address _token) external onlyOwner {
+        nft37 = KeplerItems(_token);
+    }
+
+    function setToken(address _token) external onlyOwner {
+        klu = IKlu(_token);
+    }
+
+    function setFeeTo(address _feeTo) external onlyOwner {
         feeTo = _feeTo;
     }
 
-    function setMaxCount(uint256 _maxCount) external onlyOwner {
-        maxCount = _maxCount;
+    function setStonePrice(uint256 _id, uint256 _price) external onlyOwner {
+        stonePrice[_id] = _price;
     }
 
-    function setKeyId(uint256 _boxId, uint256 _keyId) external onlyOwner {
-        keyIds[_boxId] = _keyId;
+    function setMintPrice(uint256 _shopId, uint256 _price) external onlyOwner {
+        mintPrice[_shopId] = _price * 1e18;
     }
 
-    function setMintPrice(uint256 _boxId, uint256 _price) external onlyOwner {
-        mintPrice[_boxId] = _price * 1e18;
-    }
-
-    function setLimit(uint256 _boxId, uint256 _limit) external onlyOwner {
-        limit[_boxId] = _limit;
+    function setLimit(uint256 _shopId, uint256 _limit) external onlyOwner {
+        limit[_shopId] = _limit;
     }
 
     function setLimitAll(uint256[] calldata _limit) external onlyOwner {
         limit = _limit;
     }
 
-    function useKey(address _account, uint256 _boxId, uint256 _count) payable external {
-        require(nft.balanceOf(msg.sender) >= 1);
-        require(_count <= limit[_boxId] && _count <= maxCount);
-        require(nft37.balanceOf(msg.sender, keyIds[_boxId]) >= _count);
-        
-        nft37.useItem(_account, keyIds[_boxId], _count);
-        // limit[_boxId] = limit[_boxId].sub(_count);
+    function useKlu(address _account, uint256 _shopId, uint256 _count) external {        
+        nft37.useItem(_account, stone, _count);
+        uint256 price = mintPrice[_shopId].mul(_count);
+                
+        klu.transferFrom(msg.sender, feeTo, price);
+        nft37.mint(_shopId, msg.sender, 1);        
     }
 
-    function useCoin(uint256 _boxId,uint256 _count) payable external {
-        require(nft.balanceOf(msg.sender) >= 1);
-        require(_count <= limit[_boxId] && _count <= maxCount);
-        require(msg.value == mintPrice[_boxId].mul(_count));
+    function useStone(address _account, uint256 _id) external {
+        require(nft37.balanceOf(msg.sender, stone) >= stonePrice[_id], "Less Stone");     
 
-        feeTo.transfer(msg.value);
-        limit[_boxId] = limit[_boxId].sub(_count);
+        nft37.useItem(_account, stone, stonePrice[_id]);                
+        nft37.mint(keyIds[_id], msg.sender, 1);        
     }
 
-    function mintItem(address _account, uint256 _id, uint256 _count) external {
-        nft37.mint(_id, msg.sender, _count);
-        nft37.useItem(_account, _id, 0);
+    function useNFT(uint256[] calldata _tokenIds, uint256 _count) external {
+        require(nft.balanceOf(msg.sender) >= _count, "Not Having");
+        require(_tokenIds.length == _count, "Not Matching");
+
+        nft.burnBatch(_tokenIds);
+        nft37.mint(keyIds[_count - 1], msg.sender, 1);        
     }
 }

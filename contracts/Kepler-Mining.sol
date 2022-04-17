@@ -1683,9 +1683,6 @@ contract KeplerMining is Ownable {
     uint256[] public toolIds = [36, 37, 38];
     uint256[] public maxCount = [1, 2, 3];
     uint256 public stoneId = 35;
-    uint256 public burnId = 999;
-    address public useTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
-    
 
     function addTool(uint256 _toolId, uint256 _maxCount) external onlyOwner {
         toolIds.push(_toolId);
@@ -1700,32 +1697,52 @@ contract KeplerMining is Ownable {
         toolIds[_toolId] = _itemId;
     }
 
-    function setBurnId(uint256 _burnId) external onlyOwner {
-        burnId = _burnId;
+    function setStoneId(uint256 _id) external onlyOwner {
+        stoneId = _id;
     }
 
-    function setUseTo(address _useTo) external onlyOwner {
-        useTo = _useTo;
-    }
-
-    function getBackPickaxe(address _account, uint256 _id, uint256 _count) external {
-        nft37.mint(toolIds[_id], msg.sender, _count);
-        nft37.useItem(_account, toolIds[_id], 0);
-    }
-
-    function mining(address _account, uint256 _id, uint256 _mixId) external {
+    function usePickaxe(address _account, uint256 _id, uint256 _destructCount) external {
         require(nft37.balanceOf(msg.sender, toolIds[_id]) >= 1, "Not enough items");
-
-        nft37.mint(_mixId, msg.sender, 1);
-        nft37.useItem(_account, toolIds[_id], 1);
+        nft37.useItem(_account, toolIds[_id], _destructCount);
     }
 
-    function miningMany(address _account, uint256 _id, uint256[] calldata _mixId, uint256 _useCount) external {
-        require(nft37.balanceOf(msg.sender, toolIds[_id]) >= _useCount, "Not enough items");
-    
-        for (uint256 i=0; i<_mixId.length; i++) {
-            nft37.mint(_mixId[i], msg.sender, 1);
+    function mining(uint256 _id, uint256 _mixId, uint256 _mixCount, uint256 _getBackCount) external {
+        require(maxCount[_id] >= _mixCount, "Over Mining");
+
+        if (_mixCount == 0) {
+            nft37.mint(stoneId, msg.sender, maxCount[_id]);
         }
-        nft37.useItem(_account, toolIds[_id], _useCount);
+        else if (_mixCount == maxCount[_id]) {
+            nft37.mint(_mixId, msg.sender, _mixCount);
+        } else {
+            nft37.mint(_mixId, msg.sender, _mixCount);
+            nft37.mint(stoneId, msg.sender, maxCount[_id].sub(_mixCount));
+        }
+
+        if (_getBackCount != 0) {
+            nft37.mint(toolIds[_id], msg.sender, _getBackCount);
+        }
+    }
+
+    function miningMany(uint256 _id, uint256[] calldata _mixId, uint256[] calldata _mixCount, uint256 _getBackCount) external {
+        uint256 length = _mixCount.length;
+        require(nft37.balanceOf(msg.sender, toolIds[_id]) >= length, "Not enough items");
+
+        for(uint256 i = 0; i < length; i.add(1)) {
+            require(maxCount[_id] >= _mixCount[i], "Over Mining");
+            if (_mixCount[i] == 0) {
+                nft37.mint(stoneId, msg.sender, maxCount[_id]);
+            }
+            else if (_mixCount[i] == maxCount[_id]) {
+                nft37.mint(_mixId[i], msg.sender, _mixCount[i]);
+            } else {
+                nft37.mint(_mixId[i], msg.sender, _mixCount[i]);
+                nft37.mint(stoneId, msg.sender, maxCount[_id].sub(_mixCount[i]));
+            }
+        }
+
+        if (_getBackCount != 0) {
+        nft37.mint(toolIds[_id], msg.sender, _getBackCount);
+        }
     }
 }

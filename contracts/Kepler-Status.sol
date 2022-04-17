@@ -6,7 +6,6 @@
 // File contracts/introspection/IKIP13.sol
 
 pragma solidity ^0.5.0;
-pragma experimental ABIEncoderV2;
 
 /**
  * @dev Interface of the KIP-13 standard, as defined in the
@@ -1555,28 +1554,11 @@ contract Kepler is KIP17Full("Kepler-452b", "K452"), KIP17Mintable, KIP17Metadat
         _setTokenURI(tokenId, tokenURI);
     }
 
-    function changeBatch(uint256[] memory _ids, string[] memory _urls) public onlyMinter {
-        uint256 length = _ids.length;
-
-        for(uint256 i=0; i<length; i++) {
-            _setTokenURI(_ids[i], _urls[i]);
-        }
-    }
-
     function transferBatch(address[] memory _tos, uint256[] memory _ids) public {
         uint256 length = _ids.length;
         
         for (uint256 i = 0; i < length; i += 1) {
             transferFrom(msg.sender, _tos[i], _ids[i]);
-        }
-    }
-
-    function mintBatch(address[] memory _tos, uint256[] memory _ids, string[] memory _urls) public onlyMinter {
-        uint256 length = _tos.length;
-
-        for (uint256 i = 0; i < length; i += 1) {
-            _mint(_tos[i], _ids[i]);
-            _setTokenURI(_ids[i], _urls[i]);
         }
     }
 
@@ -1593,4 +1575,116 @@ contract Kepler is KIP17Full("Kepler-452b", "K452"), KIP17Mintable, KIP17Metadat
             emit Klaytn17Burn(msg.sender, _ids[i]);
         }
     }
+}
+
+contract KeplerStatus is Ownable, KIP17Mintable {
+    using SafeMath for uint256;
+
+    Kepler public nft = Kepler(0x928267E7dB3d173898553Ff593A78719Bb16929F);
+
+    uint256[] public nft_type;
+
+    uint256[] public large_potion;
+    uint256[] public medium_potion;
+    uint256[] public small_potion;
+
+
+    uint256[] public mix;
+    uint256[] public highMix;
+    uint256[] public burned;
+
+    uint256[] public mixIndex = [0, 0, 0, 0, 0];
+
+    uint256[] public total_potion;
+    uint256[] public total_mix;
+
+    uint256 public totalPotion = total_potion.length;
+    uint256 public totalMix = total_potion.length;
+    
+
+    // type
+    function setTypeBatch(uint256[] calldata _tokenIds, uint256[] calldata _newTypes) external onlyMinter {
+        uint256 len = _tokenIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            nft_type[_tokenIds[i]] = _newTypes[i];
+        }
+    }
+
+    function setType(uint256 _tokenId, uint256 _newType) external onlyMinter {
+        nft_type[_tokenId] = _newType;
+    }
+
+    // potion
+    function setPotionBatch(uint256[] calldata _tokenIds) external onlyMinter {
+        uint256 len = _tokenIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            total_potion.push(_tokenIds[i]);
+        }
+    }
+
+    function setPotion(uint256 _tokenId) external onlyMinter {
+        total_potion.push(_tokenId);
+    }
+
+    function removePotionBatch(uint256[] calldata _tokenIds) external onlyMinter {
+        uint256 len = _tokenIds.length;
+
+        for (uint256 i = 0; i < len; i++) {
+            uint256 index = 0;
+            for (uint256 j = 0; j < total_potion.length; j++) {
+                if (total_potion[j] == _tokenIds[j]) {
+                    delete total_potion[index];
+                }
+                index += 1;
+            }
+        }
+    }
+
+    function removePotion(uint256 _tokenId) external onlyMinter {
+        uint256 index = 0;
+        for (uint256 i = 0; i < total_potion.length; i++) {
+            if (total_potion[i] == _tokenId) {
+                delete total_potion[index];
+            }
+            index += 1;
+        }
+    }
+
+    // mix
+    function setMixBatch(uint256[] calldata _tokenIds) external onlyMinter {
+        uint256 len = _tokenIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            total_mix.push(_tokenIds[i]);
+        }
+    }
+
+    function setMix(uint256 _tokenId) external onlyMinter {
+        total_mix.push(_tokenId);
+    }
+
+
+    // burn
+    function setBurnBatch(uint256[] calldata _tokenIds) external onlyMinter {
+        uint256 len = _tokenIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            burned.push(_tokenIds[i]);
+        }
+    }
+
+    function setBurn(uint256 _tokenId) external onlyMinter {
+        burned.push(_tokenId);
+    }
+
+    // mix image index
+    function setMixIndexBatch(uint256[] calldata _types) external onlyMinter {
+        uint256 len = _types.length;
+        for (uint256 i = 0; i < len; i++) {
+            mixIndex[_types[i]] += 1;
+        }
+    }
+
+    function setMixIndex(uint256 _type) external onlyMinter {
+        mixIndex[_type] += 1;
+    }
+
 }
