@@ -2548,7 +2548,7 @@ contract KeplerEnumerable is KIP13, KIP17, IKIP17Enumerable {
      * @dev Gets the total amount of tokens stored by the contract.
      * @return uint256 representing the total amount of tokens
      */
-    function totalSupply() public view returns (uint256) {
+    function totalShopUsed() public view returns (uint256) {
         return _allBurnedTokens.length;
     }
 
@@ -2666,8 +2666,8 @@ contract KeplerEnumerable is KIP13, KIP17, IKIP17Enumerable {
 contract KeplerShop is Ownable, KeplerEnumerable {
     using SafeMath for uint256;
 
-    Kepler public nft = Kepler(0x928267E7dB3d173898553Ff593A78719Bb16929F);
-    KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
+    Kepler public nft = Kepler(0x6859c58A2DC2fE89421ef0387fE9dBaf4a4413C7);
+    KeplerItems public nft37 = KeplerItems(0xB1f01670A962a177Cd814450A89820EF79E62C02);
     IKlu public klu;
     address public feeTo = 0x33365F518A0F333365b7FF53BEAbf1F5b1247b5C;
 
