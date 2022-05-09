@@ -2,182 +2,77 @@ pragma solidity ^0.5.6;
 
 
 /**
- * @dev Interface of the KIP-13 standard, as defined in the
- * [KIP-13](http://kips.klaytn.com/KIPs/kip-13-interface_query_standard).
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
  *
- * Implementers can declare support of contract interfaces, which can then be
- * queried by others.
- *
- * For an implementation, see `KIP13`.
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be aplied to your functions to restrict their use to
+ * the owner.
  */
-interface IKIP13 {
+contract Ownable {
+    address payable private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
     /**
-     * @dev Returns true if this contract implements the interface defined by
-     * `interfaceId`. See the corresponding
-     * [KIP-13 section](http://kips.klaytn.com/KIPs/kip-13-interface_query_standard#how-interface-identifiers-are-defined)
-     * to learn more about how these ids are created.
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view returns (address payable) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Returns true if the caller is the current owner.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
      *
-     * This function call must use less than 30 000 gas.
+     * > Note: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
      */
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
-}
-
-/**
- * @dev Required interface of an KIP17 compliant contract.
- */
-contract IKIP17 is IKIP13 {
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
-    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
 
     /**
-     * @dev Returns the number of NFTs in `owner`'s account.
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
      */
-    function balanceOf(address owner) public view returns (uint256 balance);
+    function transferOwnership(address payable newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
 
     /**
-     * @dev Returns the owner of the NFT specified by `tokenId`.
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
      */
-    function ownerOf(uint256 tokenId) public view returns (address owner);
-
-    /**
-     * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
-     * another (`to`).
-     *
-     * Requirements:
-     * - `from`, `to` cannot be zero.
-     * - `tokenId` must be owned by `from`.
-     * - If the caller is not `from`, it must be have been allowed to move this
-     * NFT by either `approve` or `setApproveForAll`.
-     */
-    function safeTransferFrom(address from, address to, uint256 tokenId) public;
-
-    /**
-     * @dev Transfers a specific NFT (`tokenId`) from one account (`from`) to
-     * another (`to`).
-     *
-     * Requirements:
-     * - If the caller is not `from`, it must be approved to move this NFT by
-     * either `approve` or `setApproveForAll`.
-     */
-    function transferFrom(address from, address to, uint256 tokenId) public;
-    function approve(address to, uint256 tokenId) public;
-    function getApproved(uint256 tokenId) public view returns (address operator);
-
-    function setApprovalForAll(address operator, bool _approved) public;
-    function isApprovedForAll(address owner, address operator) public view returns (bool);
-
-
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public;
-}
-
-/**
- * @title KIP-17 Non-Fungible Token Standard, optional enumeration extension
- * @dev See http://kips.klaytn.com/KIPs/kip-17-non_fungible_token
- */
-contract IKIP17Enumerable is IKIP17 {
-    function totalSupply() public view returns (uint256);
-    function tokenOfOwnerByIndex(address owner, uint256 index) public view returns (uint256 tokenId);
-
-    function tokenByIndex(uint256 index) public view returns (uint256);
-}
-
-/**
- * @dev Interface of the KIP7 standard as defined in the KIP. Does not include
- * the optional functions; to access them see `KIP7Metadata`.
- * See http://kips.klaytn.com/KIPs/kip-7-fungible_token
- */
-contract IKIP7 is IKIP13 {
-    /**
-     * @dev Returns the amount of tokens in existence.
-     */
-    function totalSupply() external view returns (uint256);
-
-    /**
-     * @dev Returns the amount of tokens owned by `account`.
-     */
-    function balanceOf(address account) external view returns (uint256);
-
-    /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a `Transfer` event.
-     */
-    function transfer(address recipient, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through `transferFrom`. This is
-     * zero by default.
-     *
-     * This value changes when `approve` or `transferFrom` are called.
-     */
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * > Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an `Approval` event.
-     */
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Moves `amount` tokens from `sender` to `recipient` using the
-     * allowance mechanism. `amount` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a `Transfer` event.
-     */
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-
-    /**
-    * @dev Moves `amount` tokens from the caller's account to `recipient`.
-    */
-    function safeTransfer(address recipient, uint256 amount, bytes memory data) public;
-
-    /**
-    * @dev  Moves `amount` tokens from the caller's account to `recipient`.
-    */
-    function safeTransfer(address recipient, uint256 amount) public;
-
-    /**
-    * @dev Moves `amount` tokens from `sender` to `recipient` using the allowance mechanism.
-    * `amount` is then deducted from the caller's allowance.
-    */
-    function safeTransferFrom(address sender, address recipient, uint256 amount, bytes memory data) public;
-
-    /**
-    * @dev Moves `amount` tokens from `sender` to `recipient` using the allowance mechanism.
-    * `amount` is then deducted from the caller's allowance.
-    */
-    function safeTransferFrom(address sender, address recipient, uint256 amount) public;
-
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
-     */
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to `approve`. `value` is the new allowance.
-     */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    function _transferOwnership(address payable newOwner) internal {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
 }
 
 /**
@@ -333,6 +228,125 @@ library SafeMath {
         require(b != 0, errorMessage);
         return a % b;
     }
+}
+
+/**
+ * @dev Interface of the KIP-13 standard, as defined in the
+ * [KIP-13](http://kips.klaytn.com/KIPs/kip-13-interface_query_standard).
+ *
+ * Implementers can declare support of contract interfaces, which can then be
+ * queried by others.
+ *
+ * For an implementation, see `KIP13`.
+ */
+interface IKIP13 {
+    /**
+     * @dev Returns true if this contract implements the interface defined by
+     * `interfaceId`. See the corresponding
+     * [KIP-13 section](http://kips.klaytn.com/KIPs/kip-13-interface_query_standard#how-interface-identifiers-are-defined)
+     * to learn more about how these ids are created.
+     *
+     * This function call must use less than 30 000 gas.
+     */
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+}
+
+/**
+ * @dev Interface of the KIP7 standard as defined in the KIP. Does not include
+ * the optional functions; to access them see `KIP7Metadata`.
+ * See http://kips.klaytn.com/KIPs/kip-7-fungible_token
+ */
+contract IKIP7 is IKIP13 {
+    /**
+     * @dev Returns the amount of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
+
+    /**
+     * @dev Returns the amount of tokens owned by `account`.
+     */
+    function balanceOf(address account) external view returns (uint256);
+
+    /**
+     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a `Transfer` event.
+     */
+    function transfer(address recipient, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through `transferFrom`. This is
+     * zero by default.
+     *
+     * This value changes when `approve` or `transferFrom` are called.
+     */
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    /**
+     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * > Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an `Approval` event.
+     */
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    /**
+     * @dev Moves `amount` tokens from `sender` to `recipient` using the
+     * allowance mechanism. `amount` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a `Transfer` event.
+     */
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    /**
+    * @dev Moves `amount` tokens from the caller's account to `recipient`.
+    */
+    function safeTransfer(address recipient, uint256 amount, bytes memory data) public;
+
+    /**
+    * @dev  Moves `amount` tokens from the caller's account to `recipient`.
+    */
+    function safeTransfer(address recipient, uint256 amount) public;
+
+    /**
+    * @dev Moves `amount` tokens from `sender` to `recipient` using the allowance mechanism.
+    * `amount` is then deducted from the caller's allowance.
+    */
+    function safeTransferFrom(address sender, address recipient, uint256 amount, bytes memory data) public;
+
+    /**
+    * @dev Moves `amount` tokens from `sender` to `recipient` using the allowance mechanism.
+    * `amount` is then deducted from the caller's allowance.
+    */
+    function safeTransferFrom(address sender, address recipient, uint256 amount) public;
+
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to `approve`. `value` is the new allowance.
+     */
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
 /**
@@ -690,6 +704,118 @@ contract KIP7 is KIP13, IKIP7 {
 }
 
 /**
+ * @title Roles
+ * @dev Library for managing addresses assigned to a Role.
+ */
+library Roles {
+    struct Role {
+        mapping (address => bool) bearer;
+    }
+
+    /**
+     * @dev Give an account access to this role.
+     */
+    function add(Role storage role, address account) internal {
+        require(!has(role, account), "Roles: account already has role");
+        role.bearer[account] = true;
+    }
+
+    /**
+     * @dev Remove an account's access to this role.
+     */
+    function remove(Role storage role, address account) internal {
+        require(has(role, account), "Roles: account does not have role");
+        role.bearer[account] = false;
+    }
+
+    /**
+     * @dev Check if an account has this role.
+     * @return bool
+     */
+    function has(Role storage role, address account) internal view returns (bool) {
+        require(account != address(0), "Roles: account is the zero address");
+        return role.bearer[account];
+    }
+}
+
+contract MinterRole {
+    using Roles for Roles.Role;
+
+    event MinterAdded(address indexed account);
+    event MinterRemoved(address indexed account);
+
+    Roles.Role private _minters;
+
+    constructor () internal {
+        _addMinter(msg.sender);
+    }
+
+    modifier onlyMinter() {
+        require(isMinter(msg.sender), "MinterRole: caller does not have the Minter role");
+        _;
+    }
+
+    function isMinter(address account) public view returns (bool) {
+        return _minters.has(account);
+    }
+
+    function addMinter(address account) public onlyMinter {
+        _addMinter(account);
+    }
+
+    function renounceMinter() public {
+        _removeMinter(msg.sender);
+    }
+
+    function _addMinter(address account) internal {
+        _minters.add(account);
+        emit MinterAdded(account);
+    }
+
+    function _removeMinter(address account) internal {
+        _minters.remove(account);
+        emit MinterRemoved(account);
+    }
+}
+
+/**
+ * @dev Extension of `KIP7` that adds a set of accounts with the `MinterRole`,
+ * which have permission to mint (create) new tokens as they see fit.
+ *
+ * At construction, the deployer of the contract is the only minter.
+ *
+ * See http://kips.klaytn.com/KIPs/kip-7-fungible_token
+ */
+contract KIP7Mintable is KIP13, KIP7, MinterRole {
+    /*
+     *     bytes4(keccak256('mint(address,uint256)')) == 0x40c10f19
+     *     bytes4(keccak256('isMinter(address)')) == 0xaa271e1a
+     *     bytes4(keccak256('addMinter(address)')) == 0x983b2d56
+     *     bytes4(keccak256('renounceMinter()')) == 0x98650275
+     *
+     *     => 0x40c10f19 ^ 0xaa271e1a ^ 0x983b2d56 ^ 0x98650275 == 0xeab83e20
+     */
+    bytes4 private constant _INTERFACE_ID_KIP7MINTABLE = 0xeab83e20;
+
+    constructor () public {
+        // register the supported interfaces to conform to KIP17 via KIP13
+        _registerInterface(_INTERFACE_ID_KIP7MINTABLE);
+    }
+
+    /**
+     * @dev See `KIP7._mint`.
+     *
+     * Requirements:
+     *
+     * - the caller must have the `MinterRole`.
+     */
+    function mint(address account, uint256 amount) public onlyMinter returns (bool) {
+        _mint(account, amount);
+        return true;
+    }
+}
+
+/**
  * @dev Extension of `KIP7` that allows token holders to destroy both their own
  * tokens and those that they have an allowance for, in a way that can be
  * recognized off-chain (via event analysis).
@@ -728,335 +854,89 @@ contract KIP7Burnable is KIP13, KIP7 {
 }
 
 /**
- * @dev Contract module which provides a basic access control mechanism, where
- * there is an account (an owner) that can be granted exclusive access to
- * specific functions.
- *
- * This module is used through inheritance. It will make available the modifier
- * `onlyOwner`, which can be aplied to your functions to restrict their use to
- * the owner.
+ * @dev Optional functions from the KIP7 standard.
+ * See http://kips.klaytn.com/KIPs/kip-7-fungible_token
  */
-contract Ownable {
-    address payable private _owner;
+contract KIP7Metadata is KIP13, IKIP7 {
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
-     */
-    constructor () internal {
-        _owner = msg.sender;
-        emit OwnershipTransferred(address(0), _owner);
-    }
-
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view returns (address payable) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(isOwner(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    /**
-     * @dev Returns true if the caller is the current owner.
-     */
-    function isOwner() public view returns (bool) {
-        return msg.sender == _owner;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
+    /*
+     *     bytes4(keccak256('name()')) == 0x06fdde03
+     *     bytes4(keccak256('symbol()')) == 0x95d89b41
+     *     bytes4(keccak256('decimals()')) == 0x313ce567
      *
-     * > Note: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
+     *     => 0x06fdde03 ^ 0x95d89b41 ^ 0x313ce567 == 0xa219a025
      */
-    function renounceOwnership() public onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
+    bytes4 private constant _INTERFACE_ID_KIP7_METADATA = 0xa219a025;
+
+    /**
+     * @dev Sets the values for `name`, `symbol`, and `decimals`. All three of
+     * these values are immutable: they can only be set once during
+     * construction.
+     */
+    constructor (string memory name, string memory symbol, uint8 decimals) public {
+        _name = name;
+        _symbol = symbol;
+        _decimals = decimals;
+
+        // register the supported interfaces to conform to KIP7 via KIP13
+        _registerInterface(_INTERFACE_ID_KIP7_METADATA);
     }
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
+     * @dev Returns the name of the token.
      */
-    function transferOwnership(address payable newOwner) public onlyOwner {
-        _transferOwnership(newOwner);
-    }
+    //function name() public view returns (string memory) {
+    //    return _name;
+    //}
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
      */
-    function _transferOwnership(address payable newOwner) internal {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
+    //function symbol() public view returns (string memory) {
+    //    return _symbol;
+    //}
+
+    /**
+     * @dev Returns the number of decimals used to get its user representation.
+     * For example, if `decimals` equals `2`, a balance of `505` tokens should
+     * be displayed to a user as `5,05` (`505 / 10 ** 2`).
+     *
+     * Tokens usually opt for a value of 18, imitating the relationship between
+     * Ether and Wei.
+     *
+     * > Note that this information is only used for _display_ purposes: it in
+     * no way affects any of the arithmetic of the contract, including
+     * `IKIP7.balanceOf` and `IKIP7.transfer`.
+     */
+    function decimals() public view returns (uint8) {
+        return _decimals;
     }
 }
 
-interface IGovernance {
-    
-    event CreatePropose(uint256 indexed _proposalId, address indexed _proposer, address _nft, uint256[] _tokenIds);
-    event VoteAgree(uint256 indexed _proposalId, address indexed _voter, address _nft, uint256[] _tokenIds);
-    event VoteDisagree(uint256 indexed _proposalId, address indexed _voter, address _nft, uint256[] _tokenIds);
-    event ExecutePropose(uint256 indexed _proposalId);
-    event CancelPropose(uint256 indexed _proposalId);
-
-    function VOTING() view external returns (uint8);
-    function CANCELED() view external returns (uint8);
-    function RESULT_AGREE() view external returns (uint8);
-    function RESULT_DISAGREE() view external returns (uint8);
-    function RESULT_SAME() view external returns (uint8);
-    function RESULT_AVOID() view external returns (uint8);
-    
-    function propose(
-
-        string calldata title,
-        string calldata summary,
-        string calldata content,
-        uint256 votePeriod,
-        
-        address nft,
-        uint256[] calldata tokenIds
-
-    ) external returns (uint256 proposalId);
-
-    function proposals(uint256 proposalId) external returns (
-        address proposer,
-        string memory title,
-        string memory summary,
-        string memory content,
-        uint256 blockNumber,
-        uint256 votePeriod,
-        bool canceled,
-        bool executed
-    );
-
-    function proposalCount() view external returns (uint256);
-    function tokenVoted(uint256 _proposalId, address _nft, uint256 _id) view external returns (bool);
-    function voteAgree(uint256 _proposalId, address _nft, uint256[] calldata _tokenIds) external;
-    function voteDisagree(uint256 _proposalId, address _nft, uint256[] calldata _tokenIds) external;
-    function getBacknft(uint256 _proposalId) external;
-    function nftBacked(uint256 _proposalId) view external returns (bool);
-    function cancel(uint256 _proposalId) external;
-    function execute(uint256 _proposalId) external;
-    function result(uint256 _proposalId) view external returns (uint8);
-}
-
-contract Governance is Ownable, IGovernance {
+contract Klu is Ownable, KIP7, KIP7Mintable, KIP7Burnable, KIP7Metadata("", "", 18) {
     using SafeMath for uint256;
 
-    uint8 public constant VOTING = 0;
-    uint8 public constant CANCELED = 1;
-    uint8 public constant RESULT_SAME = 2;
-    uint8 public constant RESULT_AGREE = 3;
-    uint8 public constant RESULT_DISAGREE = 4;
-    uint8 public constant RESULT_AVOID = 5;
+    event SetName(string name);
+    event SetSymbol(string symbol);
 
-    KIP7Burnable public tokenCA;
+    string public name = "Klu";
+    string public symbol = "KLU";
 
-    mapping(address => bool) public nftAllowed;
-    uint256 public minProposePeriod = 86400;
-    uint256 public maxProposePeriod = 604800;
-    uint256 public proposeNFTCount = 0;
-
-    uint256 public proposePrice = 100 * 1e18;
-    uint256 public minimumVoteCount = 3000;
-
-    struct Proposal {
-        address proposer;
-        string title;
-        string summary;
-        string content;
-        uint256 blockNumber;
-        address proposenft;
-        uint256 votePeriod;
-        bool canceled;
-        bool executed;
-    }
-    Proposal[] public proposals;
-    mapping(uint256 => mapping(address => uint256[])) public proposenft;
-    mapping(uint256 => uint256) public agreeVotes;
-    mapping(uint256 => uint256) public disagreeVotes;
-    mapping(uint256 => mapping(address => mapping(uint256 => bool))) public tokenVoted;
-
-    function setToken(KIP7Burnable _token) onlyOwner external {
-        tokenCA = _token;
+    function setName(string calldata _name) external onlyOwner {
+        name = _name;
+        emit SetName(_name);
     }
 
-    function allowNFT(address _nft) onlyOwner external {
-        nftAllowed[_nft] = true;
+    function setSymbol(string calldata _symbol) external onlyOwner {
+        symbol = _symbol;
+        emit SetSymbol(_symbol);
     }
 
-    function disallowNFT(address _nft) onlyOwner external {
-        nftAllowed[_nft] = false;
-    }
-
-    function setMinProposePeriod(uint256 _period) onlyOwner external {
-        minProposePeriod = _period;
-    }
-
-    function setMaxProposePeriod(uint256 _period) onlyOwner external {
-        maxProposePeriod = _period;
-    }
-
-    function setProposeNFTCount(uint256 _count) onlyOwner external {
-        proposeNFTCount = _count;
-    }
-
-    function setProposePrice(uint256 _price) onlyOwner external {
-        proposePrice = _price;
-    }
-
-    function setMinimumVoteCount(uint256 _voteCount) onlyOwner external {
-        minimumVoteCount = _voteCount;
-    }
-
-    function propose(
-
-        string calldata _title,
-        string calldata _summary,
-        string calldata _content,
-        uint256 _votePeriod,
-
-        address _nft,
-        uint256[] calldata _tokenIds
-
-    ) external returns (uint256 proposalId) {
-        require(nftAllowed[_nft] == true);
-        require(_tokenIds.length == proposeNFTCount);
-        require(minProposePeriod <= _votePeriod && _votePeriod <= maxProposePeriod);
-
-        proposalId = proposals.length;
-        proposals.push(Proposal({
-            proposer: msg.sender,
-            title: _title,
-            summary: _summary,
-            content: _content,
-            blockNumber: block.number,
-            proposenft: _nft,
-            votePeriod: _votePeriod,
-            canceled: false,
-            executed: false
-        }));
-        
-        uint256[] storage proposed = proposenft[proposalId][_nft];
-        IKIP17Enumerable nft = IKIP17Enumerable(_nft);
-
-        for (uint256 index = 0; index < proposeNFTCount; index = index.add(1)) {
-            uint256 id = _tokenIds[index];
-            require(nft.ownerOf(id) == msg.sender);
-            nft.transferFrom(msg.sender, address(this), id);
-            proposed.push(id);
-        }
-
-        tokenCA.burnFrom(msg.sender, proposePrice);
-
-        emit CreatePropose(proposalId, msg.sender, _nft, _tokenIds);
-    }
-    
-    function proposalCount() view external returns (uint256) {
-        return proposals.length;
-    }
-
-    modifier onlyVoting(uint256 _proposalId) {
-        Proposal memory proposal = proposals[_proposalId];
-        require(
-            proposal.canceled != true &&
-            proposal.executed != true &&
-            proposal.blockNumber.add(proposal.votePeriod) >= block.number,
-            "Already been voted on"
-        );
-        _;
-    }
-    
-    function voteNFT(uint256 _proposalId, address _nft, uint256[] memory _tokenIds) internal {
-        require(nftAllowed[_nft] == true);
-        
-        mapping(uint256 => bool) storage voted = tokenVoted[_proposalId][_nft];
-        IKIP17Enumerable nft = IKIP17Enumerable(_nft);
-
-        uint256 length = _tokenIds.length;
-        for (uint256 index = 0; index < length; index = index.add(1)) {
-            uint256 id = _tokenIds[index];
-            require(nft.ownerOf(id) == msg.sender && voted[id] != true);
-            voted[id] = true;
-        }
-    }
-
-    function voteAgree(uint256 _proposalId, address _nft, uint256[] calldata _tokenIds) onlyVoting(_proposalId) external {
-        voteNFT(_proposalId, _nft, _tokenIds);
-        agreeVotes[_proposalId] = agreeVotes[_proposalId].add(_tokenIds.length);
-        emit VoteAgree(_proposalId, msg.sender, _nft, _tokenIds);
-    }
-
-    function voteDisagree(uint256 _proposalId, address _nft, uint256[] calldata _tokenIds) onlyVoting(_proposalId) external {
-        voteNFT(_proposalId, _nft, _tokenIds);
-        disagreeVotes[_proposalId] = disagreeVotes[_proposalId].add(_tokenIds.length);
-        emit VoteDisagree(_proposalId, msg.sender, _nft, _tokenIds);
-    }
-
-    modifier onlyProposer(uint256 _proposalId) {
-        require(proposals[_proposalId].proposer == msg.sender, "Not Proposer");
-        _;
-    }
-
-    function getBacknft(uint256 _proposalId) onlyProposer(_proposalId) external {
-        require(result(_proposalId) != VOTING);
-
-        Proposal memory proposal = proposals[_proposalId];
-        uint256[] memory proposed = proposenft[_proposalId][proposal.proposenft];
-        IKIP17Enumerable nft = IKIP17Enumerable(proposal.proposenft);
-        uint256 length = proposed.length;
-
-        for (uint256 index = 0; index < length; index = index.add(1)) {
-            nft.transferFrom(address(this), proposal.proposer, proposed[index]);
-        }
-
-        delete proposenft[_proposalId][proposal.proposenft];
-    }
-    
-    function nftBacked(uint256 _proposalId) view external returns (bool) {
-        Proposal memory proposal = proposals[_proposalId];
-        return proposenft[_proposalId][proposal.proposenft].length == 0;
-    }
-
-    function cancel(uint256 _proposalId) onlyProposer(_proposalId) external {
-        Proposal memory proposal = proposals[_proposalId];
-        require(proposal.blockNumber.add(proposal.votePeriod) >= block.number);
-        proposals[_proposalId].canceled = true;
-        emit CancelPropose(_proposalId);
-    }
-
-    function execute(uint256 _proposalId) onlyProposer(_proposalId) external {
-        require(result(_proposalId) == RESULT_AGREE);
-        proposals[_proposalId].executed = true;
-        emit ExecutePropose(_proposalId);
-    }
-
-    function result(uint256 _proposalId) view public returns (uint8) {
-        Proposal memory proposal = proposals[_proposalId];
-        uint256 agree = agreeVotes[_proposalId];
-        uint256 disagree = disagreeVotes[_proposalId];
-        if (proposal.canceled == true) {
-            return CANCELED;
-        } else if (proposal.blockNumber.add(proposal.votePeriod) >= block.number) {
-            return VOTING;
-        } else if (agree.add(disagree) < minimumVoteCount) {
-            return RESULT_AVOID;
-        } else if (agree == disagree) {
-            return RESULT_SAME;
-        } else if (agree > disagree) {
-            return RESULT_AGREE;
-        } else {
-            return RESULT_DISAGREE;
-        }
+    function removeMinter(address account) external onlyOwner {
+        _removeMinter(account);
     }
 }
