@@ -1570,8 +1570,11 @@ contract KIP37Pausable is KIP37, Pausable {
     // }
 }
 
+// SPDX-License-Identifier: GPL-3.0
 
-// File contracts/introspection/KIP13.sol
+
+// Sources flattened with hardhat v2.6.8 https://hardhat.org
+
 
 library Counters {
     using SafeMath for uint256;
@@ -1666,69 +1669,70 @@ contract KeplerItems is KIP37, KIP37Burnable, KIP37Pausable, KIP37Mintable, Owna
     string public symbol = "KTEM";
 
     constructor(string memory uri) public KIP37(uri) {}
+
     mapping (uint256 => string) private _tokenURIs;
 
+    function uri(uint256 tokenId) public view returns (string memory) { 
+        return(_tokenURIs[tokenId]); 
+    } 
+
+    function _setTokenUri(uint256 tokenId, string memory tokenURI) private {
+         _tokenURIs[tokenId] = tokenURI; 
+    } 
+
+    function createwithURI(uint256 _id, uint256 _initialSupply, string calldata _uri) external onlyOwner {
+        _setTokenUri(_id, _uri);
+        create(_id, _initialSupply, _uri);
+    }
+
+    function massMint(uint256 id, uint256 amount) external onlyMinter {
+        _mint(msg.sender, id, amount, "");
+    }
+
+    function transferMany(address[] calldata tos, uint256[] calldata ids) external {
+        uint256 length = ids.length;
+        for (uint256 i = 0; i < length; i = i.add(1)) {
+            safeTransferFrom(msg.sender, tos[i], ids[i], 1, "");
+        }
+    }
 
     function useItem(address account, uint256 id, uint256 amount) public onlyMinter {
         _burn(account, id, amount);
     }
 }
 
-contract KeplerMining is Ownable {
+contract KeplerBoxMinter is Ownable {
     using SafeMath for uint256;
 
-    // KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
-    KeplerItems public nft37 = KeplerItems(0x0Eb6d62Fd1C550Cf846A73FC9855c2352BB9b012);
-
-    struct Gacha {
-        uint256 tokenId;
-        uint256 counter;
-    }
+    KeplerItems public nft37 = KeplerItems(0x31756CAa3363516C01843F96f6AA7d9c922163b3);
 
     mapping(uint256 => mapping(address => bool)) public payers;
-    mapping(uint256 => mapping(address => Gacha)) public gachas;
+    mapping(uint256 => mapping(address => uint256)) public gacha;
 
-    uint256[] public toolIds = [36, 37, 38];
-    uint256[] public maxCount = [1, 2, 3];
-    uint256 public stoneId = 35;
+    uint256[] public keyIds = [39, 40, 41];
 
-    function addTool(uint256 _toolId, uint256 _maxCount) external onlyOwner {
-        toolIds.push(_toolId);
-        maxCount.push(_maxCount);
+    function addKey(uint256 _keyId) external onlyOwner {
+        keyIds.push(_keyId);
     }
 
-    function setMaxCount(uint256 _toolId, uint256 _maxCount) external onlyOwner {
-        maxCount[_toolId] = _maxCount;
+    function setKeyId(uint256 _boxId, uint256 _keyId) external onlyOwner {
+        keyIds[_boxId] = _keyId;
     }
 
-    function setToolId(uint256 _toolId, uint256 _itemId) external onlyOwner {
-        toolIds[_toolId] = _itemId;
-    }
-
-    function setStoneId(uint256 _id) external onlyOwner {
-        stoneId = _id;
-    }
-
-    function checkGacha(uint256 _id, address _account) internal view returns (uint256, uint256) {
-        return  (gachas[_id][_account].tokenId, gachas[_id][_account].counter);
+    function useKey(address _account, uint256 _id, uint256 _tokenId) external {
+        require(nft37.balanceOf(msg.sender, keyIds[_id]) >= 1, "Less Key");
+        
+        nft37.useItem(_account, keyIds[_id], 1);
+        gacha[_id][msg.sender] = _tokenId;
+        payers[_id][msg.sender] = true;
     }
 
     function checkPaid(uint256 _id, address _account) internal view returns (bool) {
         return payers[_id][_account];
     }
 
-    function usePickaxe(address _account, uint256 _id, uint256 _tokenId, uint256 _count) external {
-        require(nft37.balanceOf(msg.sender, toolIds[_id]) >= 1, "Not enough items");
-
-        if (checkPaid(_id, _account)) {
-            return;
-        }
-
-        nft37.useItem(_account, toolIds[_id], 1);
-
-        gachas[_id][_account].tokenId = _tokenId;
-        gachas[_id][_account].counter = _count; 
-        payers[_id][_account] = true;
+    function checkGacha(uint256 _id, address _account) internal view returns (uint256) {
+        return gacha[_id][_account];
     }
 
     modifier onlyPayer(uint256 _id) {
@@ -1736,24 +1740,8 @@ contract KeplerMining is Ownable {
         _;
     }
 
-    function mining(uint256 _id, uint256 _getBackCount) external onlyPayer(_id) {
-        uint256 mixId = gachas[_id][msg.sender].tokenId;
-        uint256 count = gachas[_id][msg.sender].counter;
-        require(maxCount[_id] >= count, "Over Mining");
-
-        if (count == 0) {
-            nft37.mint(stoneId, msg.sender, maxCount[_id]);
-        }
-        else if (count == maxCount[_id]) {
-            nft37.mint(mixId, msg.sender, count);
-        } else {
-            nft37.mint(mixId, msg.sender, count);
-            nft37.mint(stoneId, msg.sender, maxCount[_id].sub(count));
-        }
-
-        if (_getBackCount != 0) {
-            nft37.mint(toolIds[_id], msg.sender, _getBackCount);
-        }
+    function mintItem(uint256 _id) external onlyPayer(_id) {
+        nft37.mint(gacha[_id][msg.sender], msg.sender, 1);
 
         delete payers[_id][msg.sender];
     }
