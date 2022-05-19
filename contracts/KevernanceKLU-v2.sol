@@ -804,23 +804,15 @@ contract Ownable {
 interface IGovernance {
     
     event CreatePropose(uint256 indexed _proposalId, address indexed _proposer, address _nft);
-    event VoteAgree(uint256 indexed _proposalId, address indexed _voter, address _nft, uint256 _voteCount);
-    event VoteDisagree(uint256 indexed _proposalId, address indexed _voter, address _nft, uint256 _voteCount);
-    event ExecutePropose(uint256 indexed _proposalId);
     event CancelPropose(uint256 indexed _proposalId);
 
-    function VOTING() view external returns (uint8);
     function CANCELED() view external returns (uint8);
-    function RESULT_AGREE() view external returns (uint8);
-    function RESULT_DISAGREE() view external returns (uint8);
-    function RESULT_SAME() view external returns (uint8);
-    function RESULT_AVOID() view external returns (uint8);
     
     function propose(
 
         string calldata title,
-        string calldata summary,
         string calldata content,
+        string calldata summary,
         uint256 votePeriod,
         
         address nft
@@ -828,33 +820,26 @@ interface IGovernance {
     ) external returns (uint256 proposalId);
 
     function proposals(uint256 proposalId) external returns (
+        uint256 id,
         address proposer,
         string memory title,
         string memory summary,
         string memory content,
         uint256 blockNumber,
         uint256 votePeriod,
-        bool canceled,
-        bool executed
+        bool canceled
     );
 
     function proposalCount() view external returns (uint256);
-    function voteAgree(uint256 _proposalId, address _nft, uint256 _voteCount) external;
-    function voteDisagree(uint256 _proposalId, address _nft, uint256 _voteCount) external;
     function cancel(uint256 _proposalId) external;
-    function execute(uint256 _proposalId) external;
-    function result(uint256 _proposalId) view external returns (uint8);
 }
 
 contract Governance is Ownable, IGovernance {
     using SafeMath for uint256;
 
     uint8 public constant VOTING = 0;
-    uint8 public constant CANCELED = 1;
-    uint8 public constant RESULT_SAME = 2;
-    uint8 public constant RESULT_AGREE = 3;
-    uint8 public constant RESULT_DISAGREE = 4;
-    uint8 public constant RESULT_AVOID = 5;
+    uint8 public constant ENDED = 1;
+    uint8 public constant CANCELED = 2;
 
     KIP7Burnable public tokenCA;
 
@@ -867,20 +852,19 @@ contract Governance is Ownable, IGovernance {
     uint256 public minimumVoteCount = 5000;
 
     struct Proposal {
+        uint256 id;
         address proposer;
         string title;
-        string summary;
         string content;
+        string summary;
         uint256 blockNumber;
         address proposenft;
         uint256 votePeriod;
         bool canceled;
-        bool executed;
     }
+
     Proposal[] public proposals;
     mapping(uint256 => mapping(address => uint256[])) public proposenft;
-    mapping(uint256 => uint256) public agreeVotes;
-    mapping(uint256 => uint256) public disagreeVotes;
 
     function setToken(KIP7Burnable _token) onlyOwner external {
         tokenCA = _token;
@@ -926,20 +910,20 @@ contract Governance is Ownable, IGovernance {
     ) external returns (uint256 proposalId) {
         require(nftAllowed[_nft] == true, "Not Allowed NFT");
         IKIP17Enumerable nft = IKIP17Enumerable(_nft);
-        require(nft.balanceOf(msg.sender) >= 100, "Less NFT");
+        require(nft.balanceOf(msg.sender) >= proposeNFTCount, "Less NFT");
         require(minProposePeriod <= _votePeriod && _votePeriod <= maxProposePeriod, "An invalid period");
 
         proposalId = proposals.length;
         proposals.push(Proposal({
+            id: proposalId,
             proposer: msg.sender,
             title: _title,
-            summary: _summary,
             content: _content,
+            summary: _summary,
             blockNumber: block.number,
             proposenft: _nft,
             votePeriod: _votePeriod,
-            canceled: false,
-            executed: false
+            canceled: false
         }));
 
         tokenCA.burnFrom(msg.sender, proposePrice);
@@ -949,27 +933,6 @@ contract Governance is Ownable, IGovernance {
     
     function proposalCount() view external returns (uint256) {
         return proposals.length;
-    }
-
-    modifier onlyVoting(uint256 _proposalId) {
-        Proposal memory proposal = proposals[_proposalId];
-        require(
-            proposal.canceled != true &&
-            proposal.executed != true &&
-            proposal.blockNumber.add(proposal.votePeriod) >= block.number,
-            "Already been voted on"
-        );
-        _;
-    }
-
-    function voteAgree(uint256 _proposalId, address _nft, uint256 _voteCount) onlyVoting(_proposalId) external {
-        agreeVotes[_proposalId] = _voteCount;
-        emit VoteAgree(_proposalId, msg.sender, _nft, _voteCount);
-    }
-
-    function voteDisagree(uint256 _proposalId, address _nft, uint256 _voteCount) onlyVoting(_proposalId) external {
-        disagreeVotes[_proposalId] = _voteCount;
-        emit VoteDisagree(_proposalId, msg.sender, _nft, _voteCount);
     }
 
     modifier onlyProposer(uint256 _proposalId) {
@@ -984,48 +947,14 @@ contract Governance is Ownable, IGovernance {
         emit CancelPropose(_proposalId);
     }
 
-    function execute(uint256 _proposalId) onlyProposer(_proposalId) external {
-        require(result(_proposalId) == RESULT_AGREE);
-        proposals[_proposalId].executed = true;
-        emit ExecutePropose(_proposalId);
-    }
-
     function status(uint256 _proposalId) view public returns (uint8) {
         Proposal memory proposal = proposals[_proposalId];
-        uint256 agree = agreeVotes[_proposalId];
-        uint256 disagree = disagreeVotes[_proposalId];
         if (proposal.canceled == true) {
             return CANCELED;
         } else if (proposal.blockNumber.add(proposal.votePeriod) >= block.number) {
             return VOTING;
-        } else if (agree.add(disagree) < minimumVoteCount) {
-            return RESULT_AVOID;
-        } else if (agree == disagree) {
-            return RESULT_SAME;
-        } else if (agree > disagree) {
-            return RESULT_AGREE;
         } else {
-            return RESULT_DISAGREE;
-        }
-
-    }
-
-    function result(uint256 _proposalId) view public returns (uint8) {
-        Proposal memory proposal = proposals[_proposalId];
-        uint256 agree = agreeVotes[_proposalId];
-        uint256 disagree = disagreeVotes[_proposalId];
-        if (proposal.canceled == true) {
-            return CANCELED;
-        } else if (proposal.blockNumber.add(proposal.votePeriod) >= block.number) {
-            return VOTING;
-        } else if (agree.add(disagree) < minimumVoteCount) {
-            return RESULT_AVOID;
-        } else if (agree == disagree) {
-            return RESULT_SAME;
-        } else if (agree > disagree) {
-            return RESULT_AGREE;
-        } else {
-            return RESULT_DISAGREE;
+            return ENDED;
         }
     }
 }
